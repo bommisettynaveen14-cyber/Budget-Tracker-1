@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>   Budget Tracker</title>
+    <meta name="description" content="Offline Budget Tracker - Manage your finances anywhere">
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#2196F3">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%232196F3'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.63 1.32 2.67 1.78 2.34.53 4.18 1.43 4.18 3.92-.01 1.96-1.62 3.16-3.96 3.46z'/%3E%3C/svg%3E">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* --- NEW: Styles for the redesigned Login Page --- */
+        .login-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            /* Added a subtle gradient background */
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, #e0eafc 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease-out;
+            padding: 1rem;
+        }
+
+        .login-card {
+            background-color: var(--bg-primary);
+            padding: 2.5rem 2rem;
+            border-radius: 16px; /* Increased rounding for a modern look */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 10px rgba(0, 0, 0, 0.05);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .login-card .app-icon {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            line-height: 1;
+        }
+
+        .login-card h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .login-card p {
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+        }
+
+        .login-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem; /* Consistent spacing between buttons */
+        }
+
+        .login-btn {
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-2px); /* Subtle lift effect on hover */
+            box-shadow: var(--shadow-md);
+        }
+        
+        .google-btn {
+            background-color: #fff;
+            color: #333;
+        }
+        
+        .google-btn:hover {
+            border-color: #aaa;
+        }
+
+        .guest-btn {
+            background-color: transparent;
+            color: var(--text-secondary);
+        }
+        
+        .guest-btn:hover {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .google-icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Styles for the Auth Loading Screen (Unchanged) */
+        .auth-loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-secondary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10001; /* Higher than login page */
+            transition: opacity 0.5s ease-out;
+        }
+        .icon-option.active {
+            background-color: var(--bg-tertiary);
+            outline: 2px solid var(--primary-color);
+        }
+        /* Styles for the new Image Modal */
+        .modal-content-image {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 80vh;
+        }
+        #imageModal .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="authLoadingScreen" class="auth-loading-screen">
+        <div class="spinner"></div>
+        <p style="color: var(--text-primary); margin-top: 1rem;">Loading...</p>
+    </div>
+
+    <div id="loginPage" class="login-page" style="display: none;">
+        <div class="login-card">
+            <div class="app-icon">💰</div>
+            <h1>Budget Tracker</h1>
+            <p>Take control of your finances. Sign in to continue.</p>
+            <div class="login-actions">
+                <button id="signInBtn" class="login-btn google-btn">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" onerror="this.style.display='none'">
+                    Sign in with Google
+                </button>
+                <button id="signUpBtn" class="login-btn google-btn">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" class="google-icon" onerror="this.style.display='none'">
+                    Sign up with Google
+                </button>
+                <button id="guestBtn" class="login-btn guest-btn">
+                    Continue as Guest
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="appContainer" style="display: none;">
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p id="loadingMessage" style="color: var(--text-primary); margin-top: 1rem;">Loading App Data...</p>
+        </div>
+
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title" data-i18n="app_title">Budget Tracker</h1>
+                <div class="header-actions">
+                    <button class="icon-btn" id="langToggle" title="Toggle Language" aria-label="Toggle Language">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                            <path d="M13 2h3a2 2 0 0 1 2 2v1"/>
+                            <path d="M13 3v7h7"/>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="themeToggle" title="Toggle Theme" aria-label="Toggle Theme">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="5"/>
+                            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="menuToggle" title="Menu" aria-label="Menu">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="6" x2="21" y2="6"/>
+                            <line x1="3" y1="12" x2="21" y2="12"/>
+                            <line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="main-nav" id="mainNav">
+            <button class="nav-btn active" data-tab="dashboard" data-i18n="nav_dashboard">Dashboard</button>
+            <button class="nav-btn" data-tab="transactions" data-i18n="nav_transactions">Transactions</button>
+            <button class="nav-btn" data-tab="categories" data-i18n="nav_categories">Categories</button>
+            <button class="nav-btn" data-tab="charts" data-i18n="nav_charts">Charts</button>
+            <button class="nav-btn" data-tab="settings" data-i18n="nav_settings">Settings</button>
+            <button class="nav-btn" data-tab="profile">Profile</button>
+        </nav>
+
+        <main class="main-content">
+            <section id="dashboard" class="tab-content active">
+                <div class="balance-cards">
+                    <div class="balance-card income">
+                        <div class="balance-icon">💰</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="total_income">Total Income</h3>
+                            <p class="balance-amount" id="totalIncome">0.00</p>
+                        </div>
+                    </div>
+                    <div class="balance-card expense">
+                        <div class="balance-icon">💸</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="total_expenses">Total Expenses</h3>
+                            <p class="balance-amount" id="totalExpenses">0.00</p>
+                        </div>
+                    </div>
+                    <div class="balance-card balance">
+                        <div class="balance-icon">💳</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="current_balance">Current Balance</h3>
+                            <p class="balance-amount" id="currentBalance">0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="future-expense-analysis-section">
+                    <div class="section-header">
+                        <h2>Future Expense Analysis (This Month)</h2>
+                    </div>
+                    <div class="analysis-grid">
+                        <div class="analysis-metrics">
+                            <div class="metric-item">
+                                <h4>Total Budget</h4>
+                                <p id="analysisBudget">0.00</p>
+                            </div>
+                            <div class="metric-item">
+                                <h4>Spent So Far</h4>
+                                <p id="analysisSpent">0.00</p>
+                            </div>
+                            <div class="metric-item">
+                                <h4>Projected Expense</h4>
+                                <p id="analysisProjected" class="projected-safe">0.00</p>
+                            </div>
+                        </div>
+                        <div class="analysis-chart-container">
+                            <canvas id="futureExpenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="gemini-insights-section">
+                    <button class="btn-primary-gemini" id="getSpendingInsightsBtn">
+                        ✨ Get Spending Insights
+                    </button>
+                    <button class="btn-primary-gemini" id="getAISuggestionsBtn" data-i18n="ai_suggestions_btn">
+                        💡 AI Suggestions
+                    </button>
+                </div>
+
+                <div class="budget-section">
+                    <div class="section-header">
+                        <h2 data-i18n="budget_limits">Budget Limits</h2>
+                        <button class="btn-secondary" id="setBudgetBtn" data-i18n="set_budget">Set Budget</button>
+                    </div>
+                    <div class="budget-progress" id="budgetProgress">
+                        <p data-i18n="no_budget_set">No budget limits set</p>
+                    </div>
+                </div>
+
+                <div class="quick-stats">
+                    <div class="section-header">
+                        <h2 data-i18n="quick_stats">Quick Stats</h2>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">📈</div>
+                            <div class="stat-info">
+                                <h4 data-i18n="this_month">This Month</h4>
+                                <p class="stat-value" id="thisMonthExpenses">0.00</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-info">
+                                <h4 data-i18n="avg_daily">Daily Average</h4>
+                                <p class="stat-value" id="dailyAverage">0.00</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-info">
+                                <h4 data-i18n="top_category">Top Category</h4>
+                                <p class="stat-value" id="topCategory">None</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-transactions">
+                    <div class="section-header">
+                        <h2 data-i18n="recent_transactions">Recent Transactions</h2>
+                        <button class="btn-link" id="viewAllTransactions" data-i18n="view_all">View All</button>
+                    </div>
+                    <div class="transaction-list" id="recentTransactionsList">
+                        <div class="empty-state">
+                            <p data-i18n="no_transactions">No transactions yet. Add your first transaction!</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="transactions" class="tab-content">
+                <div class="filter-controls-section" style="margin-bottom: 1rem;">
+                    <div class="section-header">
+                        <h2 data-i18n="filter_view">Filter View</h2>
+                        <div class="filter-mode-toggle">
+                            <button id="monthModeBtn" class="btn-secondary active" style="margin-right: 0.5rem;">Monthly</button>
+                            <button id="customRangeBtn" class="btn-secondary">Custom Range</button>
+                        </div>
+                    </div>
+                    
+                    <div id="monthFilterSection" class="filter-section" style="display: block; margin-top: 1rem;">
+                        <div class="month-selector">
+                            <select id="monthFilter" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--bg-primary); color: var(--text-primary);">
+                                <option value="all">All Time</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="customRangeSection" class="filter-section" style="display: none; margin-top: 1rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">From Date:</label>
+                                <input type="date" id="customFromDate" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--bg-primary); color: var(--text-primary);">
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 0.25rem; font-weight: 500;">To Date:</label>
+                                <input type="date" id="customToDate" style="padding: 0.5rem; border: 1px solid var(--border-color); border-radius: var(--border-radius); background-color: var(--bg-primary); color: var(--text-primary);">
+                            </div>
+                            <div>
+                                <button id="applyCustomRange" class="btn-primary" style="margin-top: 1.5rem;">Apply</button>
+                                <button id="clearCustomRange" class="btn-secondary" style="margin-top: 1.5rem; margin-left: 0.5rem;">Clear</button>
+                            </div>
+                        </div>
+                        <div id="customRangeSummary" style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+                            </div>
+                    </div>
+                </div>
+
+                <div id="monthlySummary" class="balance-cards" style="margin-bottom: 2rem; display: none;">
+                    <div class="balance-card income">
+                        <div class="balance-icon">💰</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="monthly_income">Monthly Income</h3>
+                            <p class="balance-amount" id="monthlyIncome">0.00</p>
+                        </div>
+                    </div>
+                    <div class="balance-card expense">
+                        <div class="balance-icon">💸</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="monthly_expenses">Monthly Expenses</h3>
+                            <p class="balance-amount" id="monthlyExpenses">0.00</p>
+                        </div>
+                    </div>
+                    <div class="balance-card balance">
+                        <div class="balance-icon">📊</div>
+                        <div class="balance-info">
+                            <h3 data-i18n="monthly_balance">Net Balance</h3>
+                            <p class="balance-amount" id="monthlyBalance">0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="categorySummarySection" class="section" style="margin-bottom: 2rem; display: none;">
+                    <div class="section-header">
+                        <h2 data-i18n="category_summary">Category Summary</h2>
+                    </div>
+                    <div id="categorySummaryGrid" class="stats-grid">
+                        </div>
+                </div>
+                
+                <div id="categoryTotalsSection" class="section" style="margin-bottom: 2rem; display: none;">
+                    <div class="section-header">
+                        <h2>Category Totals</h2>
+                    </div>
+                    <div id="categoryTotalsGrid" class="stats-grid">
+                        </div>
+                </div>
+
+                <div id="dailyTotalsSection" class="section" style="margin-bottom: 2rem; display: none;">
+                    <div class="section-header">
+                        <h2 data-i18n="daily_totals">Daily Totals</h2>
+                    </div>
+                    <div id="dailyTotalsList" class="transaction-list">
+                        </div>
+                </div>
+
+                <div class="search-filter-bar">
+                    <div class="search-box">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="m21 21-4.35-4.35"/>
+                        </svg>
+                        <input type="text" id="searchTransactions" placeholder="Search transactions..." data-i18n-placeholder="search_placeholder">
+                    </div>
+                    <button class="filter-btn" id="filterBtn" title="Filter" aria-label="Filter">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="22,3 2,3 10,12.46 10,19 14,21 14,12.46"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="filter-panel" id="filterPanel">
+                    <div class="filter-group">
+                        <label data-i18n="filter_category">Category:</label>
+                        <select id="filterCategory">
+                            <option value="" data-i18n="all_categories">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label data-i18n="filter_date_from">From:</label>
+                        <input type="date" id="filterDateFrom">
+                    </div>
+                    <div class="filter-group">
+                        <label data-i18n="filter_date_to">To:</label>
+                        <input type="date" id="filterDateTo">
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn-secondary" id="clearFilters" data-i18n="clear_filters">Clear</button>
+                        <button class="btn-primary" id="applyFilters" data-i18n="apply_filters">Apply</button>
+                    </div>
+                </div>
+
+                <div id="recurring-section" class="section">
+                    <div class="section-header">
+                        <h2>Manage Recurring Transactions</h2>
+                    </div>
+                    <div class="transaction-list" id="recurringTransactionsList">
+                        <div class="empty-state">
+                            <p>No recurring transactions set up yet.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section" style="margin-top: 2rem;">
+                     <div class="section-header">
+                        <h2>Transaction History</h2>
+                    </div>
+                    <div class="transaction-list" id="transactionsList">
+                        <div class="empty-state">
+                            <p data-i18n="no_transactions">No transactions found</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="categories" class="tab-content">
+                <div class="section-header">
+                    <h2 data-i18n="manage_categories">Manage Categories</h2>
+                    <button class="btn-primary" id="addCategoryBtn" data-i18n="add_category">Add Category</button>
+                </div>
+                
+                <div class="section" style="margin-bottom: 2rem;">
+                    <div class="section-header">
+                        <h2 data-i18n="monthly_spending_overview">Monthly Spending Overview</h2>
+                        <div class="view-toggle">
+                            <button id="showLastSixMonthsBtn" class="btn-secondary active">Last 6 Months</button>
+                            <button id="showAllMonthsBtn" class="btn-secondary" style="margin-left: 0.5rem;">All Time</button>
+                        </div>
+                    </div>
+                    <div id="monthlySpendingGrid" class="stats-grid">
+                        </div>
+                </div>
+                
+                <div class="categories-grid" id="categoriesGrid">
+                    <div class="empty-state">
+                        <p data-i18n="no_categories">No categories yet. Create your first category!</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="charts" class="tab-content">
+                <div class="chart-controls">
+                    <div class="chart-time-range">
+                        <label data-i18n="time_range">Time Range:</label>
+                        <select id="chartTimeRange">
+                            <option value="7" data-i18n="last_7_days">Last 7 Days</option>
+                            <option value="30" data-i18n="last_30_days" selected>Last 30 Days</option>
+                            <option value="90" data-i18n="last_3_months">Last 3 Months</option>
+                            <option value="365" data-i18n="last_year">Last Year</option>
+                        </select>
+                    </div>
+                    <div class="chart-month-filter" style="margin-left: 2rem;">
+                        <label data-i18n="chart_month_filter">Month:</label>
+                        <select id="chartMonthFilter">
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="charts-container">
+                    <div class="chart-section">
+                        <h2 data-i18n="expense_distribution">Expense Distribution</h2>
+                        <div class="chart-container">
+                            <canvas id="pieChart" width="300" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h2 data-i18n="category_spending">Category Spending</h2>
+                        <div class="chart-container">
+                            <canvas id="categoryBarChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h2 data-i18n="monthly_summary">Monthly Summary</h2>
+                        <div class="chart-container">
+                            <canvas id="barChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h2 data-i18n="spending_trends">Spending Trends</h2>
+                        <div class="chart-container">
+                            <canvas id="lineChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-section">
+                        <h2 data-i18n="daily_expenses">Daily Expenses</h2>
+                        <div class="chart-container">
+                            <canvas id="dailyExpensesChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="settings" class="tab-content">
+                <div class="settings-group">
+                    <h2 data-i18n="appearance">Appearance</h2>
+                    <div class="setting-item">
+                        <label data-i18n="theme">Theme:</label>
+                        <select id="themeSelect">
+                            <option value="auto" data-i18n="theme_auto">Auto</option>
+                            <option value="light" data-i18n="theme_light">Light</option>
+                            <option value="dark" data-i18n="theme_dark">Dark</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="language">Language:</label>
+                        <select id="languageSelect">
+                            <option value="en">English</option>
+                            <option value="te">తెలుగు</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h2 data-i18n="preferences">Preferences</h2>
+                    <div class="setting-item">
+                        <label for="budgetAlertThreshold">Budget Alert Threshold:</label>
+                        <select id="budgetAlertThreshold">
+                            <option value="80">80%</option>
+                            <option value="90">90%</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="daily_reminder">Daily Reminder:</label>
+                        <input type="checkbox" id="dailyReminder" checked>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="location_tracking">Location Tracking:</label>
+                        <input type="checkbox" id="locationTracking">
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="auto_categorize">Auto Categorize:</label>
+                        <input type="checkbox" id="autoCategorize" checked>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h2 data-i18n="data_management">Data Management</h2>
+                    <div class="setting-item">
+                        <button class="btn-primary" id="exportCsvBtn" data-i18n="export_csv">Export CSV</button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-primary" id="exportJsonBtn" data-i18n="export_json">Export JSON</button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-primary" id="exportPdfBtn" data-i18n="export_pdf">Export PDF</button>
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-secondary" id="importJsonBtn" data-i18n="import_json">Import JSON</button>
+                        <input type="file" id="importFileInput" accept=".json" style="display: none;">
+                    </div>
+                    <div class="setting-item">
+                        <button class="btn-danger" id="clearDataBtn" data-i18n="clear_data">Clear All Data</button>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <h2 data-i18n="about">About</h2>
+                    <div id="appInfo">
+                        <p><strong data-i18n="version">Version:</strong> <span id="appVersion">1.5.0</span></p>
+                        <p><strong data-i18n="install_date">Install Date:</strong> <span id="installDate">-</span></p>
+                        <p><strong data-i18n="total_transactions">Total Transactions:</strong> <span id="totalTransactions">0</span></p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="profile" class="tab-content">
+                <div class="profile-container">
+                    <div id="userProfileView" style="display: none; text-align: center;">
+                        <img id="userProfilePhoto" src="https://placehold.co/100x100/e9ecef/6c757d?text=User" alt="User Photo" style="width: 100px; height: 100px; border-radius: 50%; margin-bottom: 1rem; object-fit: cover; border: 3px solid var(--bg-tertiary);">
+                        <h2 id="userDisplayName" style="margin-bottom: 0.5rem; font-size: 1.5rem;">User Name</h2>
+                        <p id="userEmail" style="color: var(--text-secondary); margin-bottom: 2rem; font-size: 1rem;">user@example.com</p>
+                        <div class="profile-actions" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <button class="btn-primary" id="restoreDataBtn">Restore Data from Cloud</button>
+                            <button class="btn-danger" id="logoutBtn">Logout</button>
+                        </div>
+                    </div>
+            
+                    <div id="guestProfileView">
+                        <h2>Profile</h2>
+                        <div class="profile-info">
+                            <p>You are currently in <strong>Guest Mode</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <nav class="bottom-nav">
+            <button class="bottom-nav-btn active" data-tab="dashboard" aria-label="Dashboard">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Dashboard</span>
+            </button>
+            <button class="bottom-nav-btn" data-tab="transactions" aria-label="Transactions">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <span>Transactions</span>
+            </button>
+            <button id="addTransactionFab" title="Add Transaction" aria-label="Add Transaction">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+            <button class="bottom-nav-btn" data-tab="categories" aria-label="Categories">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <span>Categories</span>
+            </button>
+            <button class="bottom-nav-btn" data-tab="profile" aria-label="Profile">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>Profile</span>
+            </button>
+        </nav>
+
+        <div class="modal" id="pdfExportModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">Export PDF Report</h2>
+                    <button class="close-btn" id="closePdfExportModal">&times;</button>
+                </div>
+                <form id="pdfExportForm">
+                    <div class="form-group">
+                        <label for="pdfFromDate">From Date:</label>
+                        <input type="date" id="pdfFromDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pdfToDate">To Date:</label>
+                        <input type="date" id="pdfToDate" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelPdfExport" data-i18n="cancel">Cancel</button>
+                        <button type="submit" class="btn-primary">Generate PDF</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="modal" id="transactionModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="add_transaction">Add Transaction</h2>
+                    <button class="close-btn" id="closeTransactionModal">&times;</button>
+                </div>
+                <form id="transactionForm">
+                    <input type="hidden" id="transactionId" value="">
+                    <input type="hidden" id="transactionReceiptId" value="">
+                    <input type="hidden" id="isReceiptRemoved" value="0">
+
+                    <div class="form-group">
+                        <label data-i18n="description">Description:</label>
+                        <div class="input-with-icon">
+                            <input type="text" id="transactionDescription" required>
+                            <button type="button" class="icon-btn voice-btn" id="voiceInputBtn" title="Add with Voice">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                    <line x1="12" y1="19" x2="12" y2="23"/>
+                                    <line x1="8" y1="23" x2="16" y2="23"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="voiceStatus" class="voice-status"></div>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="amount">Amount:</label>
+                        <input type="number" id="transactionAmount" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="type">Type:</label>
+                        <select id="transactionType" required>
+                            <option value="expense" data-i18n="expense">Expense</option>
+                            <option value="income" data-i18n="income">Income</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="category">Category:</label>
+                        <select id="transactionCategory" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="date">Date:</label>
+                        <input type="date" id="transactionDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="transactionFrequency">Frequency:</label>
+                        <select id="transactionFrequency">
+                            <option value="none" selected>None</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="notes">Notes:</label>
+                        <textarea id="transactionNotes"></textarea>
+                    </div>
+                    <div class="form-group receipt-group">
+                        <label data-i18n="receipt">Receipt:</label>
+                        <div id="receiptPreviewContainer" style="display: none;">
+                            <img id="receiptPreviewImage" src="" alt="Receipt Preview">
+                            <button type="button" class="btn-link" id="removeReceiptBtn">Remove</button>
+                        </div>
+                        <input type="file" id="transactionReceipt" accept="image/*">
+                        <button type="button" class="btn-primary-gemini" id="scanReceiptBtn">✨ Scan Receipt</button>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="location">Location:</label>
+                        <input type="text" id="transactionLocation">
+                        <button type="button" class="btn-link" id="getCurrentLocation" data-i18n="get_location">Get Current Location</button>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelTransaction" data-i18n="cancel">Cancel</button>
+                        <button type="submit" class="btn-primary" data-i18n="save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal" id="categoryModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="add_category">Add Category</h2>
+                    <button class="close-btn" id="closeCategoryModal">&times;</button>
+                </div>
+                <form id="categoryForm">
+                    <input type="hidden" id="categoryId">
+                    <div class="form-group">
+                        <label data-i18n="name">Name:</label>
+                        <input type="text" id="categoryName" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="icon">Icon:</label>
+                        <div class="icon-picker">
+                            <div class="default-icons" style="display: flex; gap: 10px; margin-bottom: 10px; cursor: pointer; flex-wrap: wrap;">
+                                <span class="icon-option" data-icon="🍕" title="Food" style="font-size: 24px; padding: 5px; border-radius: 5px;">🍕</span>
+                                <span class="icon-option" data-icon="🚗" title="Travel" style="font-size: 24px; padding: 5px; border-radius: 5px;">🚗</span>
+                                <span class="icon-option" data-icon="🛒" title="Shopping" style="font-size: 24px; padding: 5px; border-radius: 5px;">🛒</span>
+                                <span class="icon-option" data-icon="📄" title="Bills" style="font-size: 24px; padding: 5px; border-radius: 5px;">📄</span>
+                                <span class="icon-option" data-icon="🏠" title="Rent" style="font-size: 24px; padding: 5px; border-radius: 5px;">🏠</span>
+                                <span class="icon-option" data-icon="⚙️" title="Others" style="font-size: 24px; padding: 5px; border-radius: 5px;">⚙️</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <label for="categoryIconUpload" class="btn-secondary" style="cursor: pointer; flex-shrink: 0;">Upload Custom</label>
+                                <input type="file" id="categoryIconUpload" accept="image/*" style="display: none;">
+                                <div id="iconPreview" style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="color: var(--text-secondary);">Preview:</span>
+                                    <img id="iconPreviewImg" src="" alt="Icon Preview" style="width: 32px; height: 32px; display: none; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color);">
+                                    <span id="iconPreviewEmoji" style="font-size: 24px;"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="categoryIcon">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="color">Color:</label>
+                        <input type="color" id="categoryColor" value="#2196F3">
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="type">Type:</label>
+                        <select id="categoryType" required>
+                            <option value="expense" data-i18n="expense">Expense</option>
+                            <option value="income" data-i18n="income">Income</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelCategory" data-i18n="cancel">Cancel</button>
+                        <button type="submit" class="btn-primary" data-i18n="save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal" id="budgetModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="set_budget">Set Budget</h2>
+                    <button class="close-btn" id="closeBudgetModal">&times;</button>
+                </div>
+                <form id="budgetForm">
+                    <input type="hidden" id="budgetId">
+                    <div class="form-group">
+                        <label data-i18n="category">Category:</label>
+                        <select id="budgetCategory" required>
+                            </select>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="budget_amount">Budget Amount:</label>
+                        <input type="number" id="budgetAmount" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label data-i18n="period">Period:</label>
+                        <select id="budgetPeriod" required>
+                            <option value="monthly" data-i18n="monthly">Monthly</option>
+                            <option value="weekly" data-i18n="weekly">Weekly</option>
+                            <option value="yearly" data-i18n="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-secondary" id="cancelBudget" data-i18n="cancel">Cancel</button>
+                        <button type="submit" class="btn-primary" data-i18n="save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal" id="budgetAlertModal" style="display: none;">
+            <div class="modal-content alert-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">⚠️ Budget Alert</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="budgetAlertMessage">You have reached a spending threshold.</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-primary" id="budgetAlertOK">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="dailyReminderModal" style="display: none;">
+            <div class="modal-content reminder-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">Daily Reminder</h2>
+                </div>
+                <div class="modal-body">
+                    <p>Have you recorded your expenses today?</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="reminderCancel">Cancel</button>
+                    <button type="button" class="btn-primary" id="reminderOK">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="deleteConfirmModal" style="display: none;">
+            <div class="modal-content confirm-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title">Confirm Action</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="deleteConfirmMessage">Are you sure you want to delete this item?</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="deleteCancel">Cancel</button>
+                    <button type="button" class="btn-danger" id="deleteConfirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="currencyChangeConfirmModal" style="display: none;">
+            <div class="modal-content confirm-modal">
+                <div class="modal-header">
+                    <h2 class="modal-title" style="color: var(--warning-color);">Confirm Currency Change</h2>
+                </div>
+                <div class="modal-body">
+                    <p id="currencyChangeConfirmMessage">Changing currency will DELETE all old transactions. Please export or note them before proceeding.</p>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="currencyChangeCancel">Cancel</button>
+                    <button type="button" class="btn-danger" id="currencyChangeConfirm">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal" id="insightsModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">✨ Spending Insights</h2>
+                    <button class="close-btn" id="closeInsightsModal">&times;</button>
+                </div>
+                <div class="modal-body" id="insightsResult">
+                    </div>
+            </div>
+        </div>
+        
+        <div class="modal" id="aiSuggestionsModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title" data-i18n="ai_suggestions_title">AI Suggestions</h2>
+                    <button class="close-btn" id="closeAiSuggestionsModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="ai-suggestion-periods">
+                        <button class="period-chip active" data-period="this-month" data-i18n="this_month_chip">This Month</button>
+                        <button class="period-chip" data-period="last-month" data-i18n="last_month_chip">Last Month</button>
+                        <button class="period-chip" data-period="last-3-months" data-i18n="last_3_months_chip">Last 3 Months</button>
+                    </div>
+                    <div id="aiSuggestionsList" class="suggestions-list">
+                        </div>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="recalculateAiSuggestions" data-i18n="recalculate">Recalculate</button>
+                    <button type="button" class="btn-secondary" id="copyAiSuggestions" data-i18n="copy_tips">Copy Tips</button>
+                    <button type="button" class="btn-primary" id="closeAiSuggestionsModalBtn" data-i18n="close">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="imageModal" class="modal">
+            <span class="close-btn" id="closeImageModal">&times;</span>
+            <img class="modal-content-image" id="fullImage">
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>

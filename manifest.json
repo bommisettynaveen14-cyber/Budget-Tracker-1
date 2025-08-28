@@ -1,0 +1,6 @@
+{
+  "name": "Budget Tracker",
+  "short_name": "Budget Tracker",
+  "description": "A comprehensive offline budget tracker to manage your personal finances",
+  "display": "browser"
+}
